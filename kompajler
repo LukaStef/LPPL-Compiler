@@ -1,0 +1,408 @@
+using System.Data;
+using System.Diagnostics;
+
+namespace compiler
+{
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+        }
+        private void button1_Click(object sender, EventArgs e) //izvrsava kod
+        {
+            List<string> prIme = new List<string>(); //cuva imena promenljivih
+            List<string> prVred = new List<string>(); //cuva vrednosti promenljivih
+            int d = 0; //indeks za liste. samo se koristi u ShowVar
+            try
+            {
+                //odvajanje komandi
+                DataTable t = new();
+                richTextBox2.Text = "";
+                string k = richTextBox1.Text;
+                k = k.Remove(richTextBox1.Text.Length - 1, 1);
+                k = k.Replace("\n","");
+                string[] n = new string[k.Length];
+                n = k.Split(";");
+                //odvajanje kraj
+                for (int i = 0; i < n.Length; i++)
+                {
+                    //odvajanje komande od subjekta
+                    //primer:
+                    //Write('a')
+                    //Write = komanda
+                    //'a' = subjekat
+                    //ako ima apostrofe onda je string
+                    //ako ima % na pocetku onda je promenljiva
+                    //ako nema apostrofe onda je izraz koji se racuna
+                    string cmd = n[i];
+                    string arg1 = "";
+                    string arg2 = "";
+                    if (cmd[0] != '%') //ako nije promenljiva
+                    {
+                        cmd = cmd.Replace(")", "");
+                        string[] n2 = new string[cmd.Length];
+                        n2 = cmd.Split("(");
+                        string com = n2[0];
+                        string sub = n2[1];
+                        //& predstavlja odvajac argumenata.
+                        //primer: Write('aaa'&'bbb'); ovo ima 2 argumenta i oba ce se ispisati
+                        //isto radi sa izrazima i promenljivama
+                        if (sub.Contains('&')) //ako ima vise argumenata
+                        {
+                            string subTemp = ""; //privremena vrednost. predstavlja podargument u trenutnom ciklusu
+                            string[] argument = new string[sub.Length]; //niz sa argumentima
+                            argument = sub.Split('&');
+                            arg1 = argument[0]; //prvi argument
+                            arg2 = argument[1]; //drugi argument
+                            //arg1 i arg2 se koriste ako komandi trebaju iskljucivo dva argumenta
+                            for (int j = 0; j < argument.Length; j++)
+                            {
+                                string subArgument = argument[j];
+                                if (subArgument[0].Equals('\'') && subArgument[subArgument.Length - 1].Equals('\'')) //ako je string
+                                {
+                                    subArgument = subArgument.Remove(0, 1);
+                                    subArgument = subArgument.Remove(subArgument.Length - 1, 1);
+                                    subArgument = Menjanje(subArgument);
+                                    subTemp += subArgument;
+                                    if (j == 0)
+                                        arg1 = subArgument;
+                                    else if (j == 1)
+                                        arg2 = subArgument;
+                                }
+                                else if (subArgument[0].Equals('%')) //ako je promenljiva
+                                {
+                                    //MessageBox.Show(sub);
+                                    subArgument = subArgument.Remove(0, 1);
+                                    if (prIme.Contains(subArgument))
+                                    {
+                                        int ind = prIme.IndexOf(subArgument);
+                                        subArgument = prVred[ind];
+                                        subTemp += subArgument;
+                                        if (j == 0)
+                                            arg1 = subArgument;
+                                        else if (j == 1)
+                                            arg2 = subArgument;
+                                    }
+                                    else
+                                    {
+                                        MessageBox.Show("Promenljiva ne postoji", "Greška");
+                                        richTextBox2.Text = "";
+                                        return;
+                                    }
+                                }
+                                else //ako je izraz
+                                {
+                                    try
+                                    {
+                                        int r = (int)t.Compute(subArgument, "");
+                                        subArgument = r.ToString();
+                                        subTemp += subArgument;
+                                        if (j == 0)
+                                            arg1 = subArgument;
+                                        else if (j == 1)
+                                            arg2 = subArgument;
+                                    }
+                                    catch
+                                    {
+                                        MessageBox.Show("Argument nije ispravan", "Greška");
+                                        richTextBox2.Text = "";
+                                        return;
+                                    }
+                                }
+                                sub = subTemp;
+                            }
+                        }
+                        else //ako nema vise argumenata
+                        {
+                            if (sub[0].Equals('\'') && sub[sub.Length - 1].Equals('\'')) //ako je string
+                            {
+                                sub = sub.Remove(0, 1);
+                                sub = sub.Remove(sub.Length - 1, 1);
+                                sub = Menjanje(sub);
+                            }
+                            else if (sub[0].Equals('%')) //ako je promenljiva
+                            {
+                                //MessageBox.Show(sub);
+                                sub = sub.Remove(0, 1);
+                                if (prIme.Contains(sub))
+                                {
+                                    int ind = prIme.IndexOf(sub);
+                                    sub = prVred[ind];
+                                }
+                                else
+                                {
+                                    MessageBox.Show("Promenljiva ne postoji", "Greška");
+                                    richTextBox2.Text = "";
+                                    return;
+                                }
+                            }
+                            else //ako je izraz
+                            {
+                                try
+                                {
+                                    int r = (int)t.Compute(sub, "");
+                                    sub = r.ToString();
+                                }
+                                catch
+                                {
+                                    MessageBox.Show("Argument nije ispravan", "Greška");
+                                    richTextBox2.Text = "";
+                                    return;
+                                }
+                            }
+                        }
+                        Comp c = new Comp(sub); //klasa sa komandama
+                        //MessageBox.Show(com);
+                        int arg2Int;
+                        switch (com) //komande
+                        {
+                            case "Help": //ispisuje uputstvo o komandi
+                                richTextBox2.Text += c.Help();
+                                break;
+                            case "Write": //dodaje tekst na postojeci tekst
+                                richTextBox2.Text += sub;
+                                break;
+                            case "WriteLine": //dodaje tekst i novi red
+                                richTextBox2.Text += sub + "\n";
+                                break;
+                            case "BinConvert": //pretvara zadat broj u binarni i ispisuje
+                                richTextBox2.Text += c.BinConvert();
+                                break;
+                            case "OctConvert": //pretvara zadat broj u oktalni i ispisuje
+                                richTextBox2.Text += c.OctConvert();
+                                break;
+                            case "HexConvert": //pretvara zadat broj u heksadekadni i ispisuje
+                                richTextBox2.Text += c.HexConvert();
+                                break;
+                            case "Pow": //racuna stepen broja, drugi broj je stepen
+                                richTextBox2.Text += c.Pow(arg1,arg2);
+                                break;
+                            case "Root": //racuna koren broja
+                                richTextBox2.Text += c.Root(arg1, arg2);
+                                break;
+                            case "Fact": //racuna faktorijal broja
+                                richTextBox2.Text += c.Fact();
+                                break;
+                            case "Random": //ispisuje nasumican broj
+                                richTextBox2.Text += c.Random(arg1, arg2);
+                                break;
+                            case "Log": //racuna logaritam
+                                richTextBox2.Text += c.Log(arg1, arg2);
+                                break;
+                            case "Count": //broji slova u stringu
+                                richTextBox2.Text += c.Count();
+                                break;
+                            case "Remove": //brise drugi string iz prvog
+                                richTextBox2.Text += c.Remove(arg1, arg2);
+                                break;
+                            case "Ascii": //prikazuje ascii kod karaktera
+                                richTextBox2.Text += c.Ascii();
+                                break;
+                            case "Back": //ispisuje string unazad
+                                richTextBox2.Text += c.Back();
+                                break;
+                            case "BackLine": //ispisuje string unazad i dodaje novi red
+                                richTextBox2.Text += c.Back() + "\n";
+                                break;
+                            case "ToUpper": //ispisuje string u velikim slovima
+                                richTextBox2.Text += c.ToUpper();
+                                break;
+                            case "ToLower": //ispisuje string u malim slovima
+                                richTextBox2.Text += c.ToLower();
+                                break;
+                            case "RemoveCount": //brise slova
+                                richTextBox2.Text += c.RemoveCount(arg1, arg2);
+                                break;
+                            case "WriteFor": //ispisuje vise puta
+                                richTextBox2.Text += c.WriteFor(arg1, arg2);
+                                break;
+                            case "WriteLineFor": //ispisuje vise puta i dodaje novi red
+                                richTextBox2.Text += c.WriteLineFor(arg1, arg2);
+                                break;
+                            case "MsgBox": //prikazuje messagebox
+                                c.MsgBox(arg1, arg2);
+                                break;
+                            case "Wait": //pravi pauzu
+                                Refresh();
+                                c.Wait();
+                                break;
+                            case "Clear": //cisti kutiju sa rezultatom koda
+                                richTextBox2.Text = "";
+                                break;
+                            case "ShowVar": //ispisuje sve promenljive i njihove vrednosti
+                                foreach (string x in prIme)
+                                {
+                                    richTextBox2.Text += "Ime " + d + ": " + x + "\n";
+                                    d++;
+                                }
+                                d = 0;
+                                foreach (string x in prVred)
+                                {
+                                    richTextBox2.Text += "Vrednost " + d + ": " + x + "\n";
+                                    d++;
+                                }
+                                break;
+                            case "WriteDelay": //ispisuje slovo po slovo
+                                arg2Int = (int)t.Compute(arg2, "");
+                                for (int b = 0; b < arg1.Length; b++)
+                                {
+                                    richTextBox2.Text += arg1[b];
+                                    Thread.Sleep(arg2Int);
+                                    Refresh();
+                                }
+                                break;
+                            case "WriteLineDelay": //ispisuje slovo po slovo i dodaje novi red posle svakog slova
+                                arg2Int = (int)t.Compute(arg2, "");
+                                for (int b = 0; b < arg1.Length; b++)
+                                {
+                                    richTextBox2.Text += arg1[b];
+                                    Thread.Sleep(arg2Int);
+                                    Refresh();
+                                }
+                                break;
+                            default:
+                                MessageBox.Show("Komanda '" + com + "' ne postoji", "Greška");
+                                richTextBox2.Text = "";
+                                break;
+                        }
+                    }
+                    else //ako jeste promenljiva
+                    {
+                        //oblik promenljive
+                        // %tip ime=vrednost;
+                        //ispis promenljive
+                        // Write(%ime);
+                        string[] pr = new string[cmd.Length];
+                        pr = cmd.Split('=');
+                        string tipime = pr[0];
+                        string vred = pr[1];
+                        string[] tipimeN = new string[tipime.Length];
+                        tipimeN = tipime.Split(' ');
+                        string tip = tipimeN[0];
+                        string ime = tipimeN[1];
+                        prIme.Add(ime);
+                        if (tip == "%var") // deklarisanje nove promenljive. moze biti string ili izraz
+                        {
+                            if (vred[0].Equals('\'') && vred[vred.Length - 1].Equals('\''))
+                            {
+                                vred = vred.Remove(0, 1);
+                                vred = vred.Remove(vred.Length - 1, 1);
+                                prVred.Add(vred);
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    int r = (int)t.Compute(vred, "");
+                                    vred = r.ToString();
+                                    prVred.Add(vred);
+                                }
+                                catch
+                                {
+                                    MessageBox.Show("Vrednost u promenljivoj '" + ime + "' nije ispravna");
+                                    richTextBox2.Text = "";
+                                    return;
+                                }
+                            }
+                        }
+                        else if (tip == "%assign") //menjanje vrednosti postojece promenljive
+                        {
+                            if (prIme.Contains(ime)) //ako promenljiva postoji
+                            {
+                                int ind = prIme.IndexOf(ime);
+                                if (vred[0].Equals('\'') && vred[vred.Length - 1].Equals('\'')) //ako je string
+                                {
+                                    vred = vred.Remove(0, 1);
+                                    vred = vred.Remove(vred.Length - 1, 1);
+                                    vred = Menjanje(vred);
+                                    prVred[ind] = vred;
+                                }
+                                else //ako je izraz
+                                {
+                                    try
+                                    {
+                                        int r = (int)t.Compute(vred, "");
+                                        vred = r.ToString();
+                                        prVred[ind] = vred;
+                                    }
+                                    catch //ako nije ni jedno ni drugo
+                                    {
+                                        MessageBox.Show("Vrednost u promenljivoj '" + ime + "' nije ispravna");
+                                        richTextBox2.Text = "";
+                                        return;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                MessageBox.Show("Promenljiva '" + ime + "' ne postoji");
+                            }
+                        }
+                        else
+                        {
+                            MessageBox.Show("Tip promenljive '" + ime + "' ne postoji");
+                            richTextBox2.Text = "";
+                            return;
+                        }
+                    }
+                }
+            }
+            catch 
+            { 
+                MessageBox.Show("Kod nije ispravan", "Greška"); 
+                richTextBox2.Text = ""; 
+            }
+        }
+        //izvrsavanje kraj
+        //meni
+        private void uputstvoToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show("U gornjoj kutiji se upisuje program. Ubacite sve komande i promenljive koje želite i odvojite ih sa ;. Kad završite, kliknite na dugme 'Izvrši' pa će rezultat vašeg koda da se pojavi u donjoj kutiji. Ako ne znate šta radi neka komanda, napišite 'Help('ime komande')' da dobijete sve informacije o njoj. Dodatne informacije se nalaze u sekciji za sintaksu.","Uputstvo");
+        }
+
+        private void komandeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show("Sve komande:\n\nHelp()\nWrite()\nWriteLine()\nWriteFor()\nWriteLineFor()\nWriteDelay()\nWriteLineDelay()\nBack()\nBackLine()\nMsgBox()\nBinConvert()\nOctConvert()\nHexConvert()\nPow()\nRoot()\nFact()\nRandom()\nLog()\nCount()\nRemove()\nRemoveCount()\nAscii()\nToUpper()\nToLower()\nWait()\nClear()\n\nDeklaracija promenljivih: %var ime=vrednost;\nMenjanje vrednosti promenljive: %assign ime=vrednost;\n\nPosebni karakteri:\n\n& - odvajac argumenata\n#n - novi red\n#t - tabulator", "Sintaksa");
+        }
+
+        private void verzijaToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show("Luka Procedural Programming Language Compiler\nTrenutna verzija: 02.02.2023.\nPrva verzija: 20.01.2023.\nAutor: Luka Stefanović", "Verzija");
+        }
+        //meni kraj
+        private void button2_Click(object sender, EventArgs e) // cisti obe kutije
+        {
+            richTextBox1.Text = "";
+            richTextBox2.Text = "";
+        }
+        
+        //cuvanje koda, ciscenje i otvaranje fajla sa kodom
+        
+        private void otvoriFajlToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string path = @"C:\Users\Luka\Desktop\Programiranje\compiler\kod.txt";
+            Process.Start(@"notepad.exe", path);
+        }
+
+        private void ocistiToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string path = @"C:\Users\Luka\Desktop\Programiranje\compiler\kod.txt";
+            File.WriteAllText(path, "-----Ovde se cuva kod-----\n\n\n\n\n");
+        }
+
+        private void potvrdiToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string path = @"C:\Users\Luka\Desktop\Programiranje\compiler\kod.txt";
+            DateTime danasnjiDan = DateTime.Now;
+            File.AppendAllText(path, danasnjiDan + "\n\n" + richTextBox1.Text + "\n\n-kraj\n\n");
+        }
+        //cuvanje kraj
+        static string Menjanje(string arg) //ubacuje specijalne karaktere
+        {
+            arg = arg.Replace("#n", "\n");
+            arg = arg.Replace("#t", "\t");
+            return arg;
+        }
+    }
+}
