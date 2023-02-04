@@ -1,0 +1,236 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Timers;
+
+namespace compiler
+{
+    internal class Comp
+    {
+        private readonly string sub;
+        private int arg1Int, arg2Int;
+        public Comp(string sub)
+        {
+            this.sub = sub;
+        }
+        public string Help()
+        {
+            string help;
+            help = sub switch
+            {
+                "Help" => "Help('komanda')\nIspisuje pomoc o pisanju jedne komande i sta radi ta komanda.\n",
+                "Write" => "Write(argumenti).\nIspisuje neki string ili rezultat izraza.\n",
+                "WriteLine" => "WriteLine(argumenti).\nIspisuje neki string ili rezultat izraza i postavlja novi red.\n",
+                "WriteDelay" => "WriteDelay('string'&izraz)\nIspisuje string slovo po slovo, i pravi (izraz) pauzu izmedju svakog slova. Izraz je izrazen u milisekundama.\n",
+                "WriteLineDelay" => "WriteLineDelay('string&izraz')\nIspisuje string slovo po slovo, pravi (izraz) pauzu izmedju svakog slova i dodaje novi red nakon svakog slova. Izraz je izrazen u milisekundama.\n",
+                "BinConvert" => "BinConvert(argumenti).\nIspisuje binarni oblik izraza.\n",
+                "OctConvert" => "OctConvert(argumenti).\nIspisuje oktalni oblik izraza.\n",
+                "HexConvert" => "HexConvert(argumenti).\nIspisuje heksadecimalni oblik izraza.\n",
+                "Pow" => "Pow(prvi&drugi).\nIspisuje stepenovanje prvog broja drugim brojem.\n",
+                "Root" => "Sqrt(prvi&drugi).\nIspisuje (drugi) koren prvog izraza.\n",
+                "Fact" => "Fact(izraz).\nIspisuje faktorijal izraza.\n",
+                "Random" => "Random(prvi&drugi).\nIspisuje nasumican broj izmedju prvog i drugog broja.\n",
+                "Log" => "Log(prvi&drugi).\nIspisuje logaritam prvog broja na bazi drugog broja.\n",
+                "Count" => "Count(argumenti).\nIspisuje broj karaktera u stringu.\n",
+                "Remove" => "Remove('string'&'string').\nIspisuje prvi string u kome su izbrisane sve instance drugog stringa.\n",
+                "Ascii" => "Ascii('slovo').\nIspisuje ASCII kod jednog slova. Ako je u zagradama napisan string, ispisace se kod samo prvog karaktera.\n",
+                "Back" => "Back(argumenti).\nIspisuje string unazad. Ako je unet izraz, rezultat ce biti ispisan unazad.\n",
+                "BackLine" => "BackLine(argumenti).\nIspisuje string unazad i postavlja novi red. Ako je unet izraz, rezultat ce biti ispisan unazad.\n",
+                "ToUpper" => "ToUpper(argumenti).\nIspisuje string u kome su sva slova velika.\n",
+                "ToLower" => "ToLower(argumenti).\nIspisuje string u kome su sva slova mala.\n",
+                "RemoveCount" => "RemoveCount('string&izraz').\nIspisuje string kome su izbrisana prvih (izraz) slova.\n",
+                "WriteFor" => "WriteFor('string'&izraz).\nIspisuje string (izraz) puta.\n",
+                "WriteLineFor" => "WriteLineFor('string'&izraz).\nIspisuje string (izraz) puta i postavlja novi red.\n",
+                "MsgBox" => "MsgBox('tekst'&'naslov').\nPravi messagebox ciji je sadrzaj prvi string, a naslov drugi string.\n",
+                "Wait" => "Wait(izraz).\nPravi pauzu od (izraz) milisekundi pre nego sto nastavi da izvrsava kod.\n",
+                "Clear" => "Clear('').\nCisti celu kutiju sa rezultatom koda.\n",
+                _ => "Nepoznata komanda.\n",
+            };
+            return help;
+        }
+        //matematicke komande
+        public string BinConvert() //u binarni
+        {
+            int dec = int.Parse(sub);
+            string bins = "";
+            int bin;
+            while (dec > 0)
+            {
+                bin = dec % 2;
+                dec /= 2;
+                bins = bin.ToString() + bins;
+            }
+            return bins;
+        }
+        public string OctConvert() //u oktalni
+        {
+            int dec = int.Parse(sub);
+            string octs = "";
+            int oct;
+            while (dec > 0)
+            {
+                oct = dec % 8;
+                dec /= 8;
+                octs = oct.ToString() + octs;
+            }
+            return octs;
+        }
+        public string HexConvert() //u heksa
+        {
+            int dec = int.Parse(sub);
+            string hexs = "";
+            int hex;
+            while (dec > 0)
+            {
+                hex = dec % 16;
+                dec /= 16;
+                hexs = hex switch
+                {
+                    10 => "A" + hexs,
+                    11 => "B" + hexs,
+                    12 => "C" + hexs,
+                    13 => "D" + hexs,
+                    14 => "E" + hexs,
+                    15 => "F" + hexs,
+                    _ => hex.ToString() + hexs,
+                };
+            }
+            return hexs;
+        }
+        public string Pow(string arg1, string arg2) //stepen
+        {
+            DataTable t = new DataTable();
+            string pow;
+            arg1Int = (int)t.Compute(arg1, "");
+            arg2Int = (int)t.Compute(arg2, "");
+            double powb = Math.Pow(arg1Int, arg2Int);
+            pow = powb.ToString();
+            return pow;
+        }
+        public string Root(string arg1, string arg2) //koren
+        {
+            DataTable t = new DataTable();
+            string pow;
+            arg1Int = (int)t.Compute(arg1, "");
+            arg2Int = (int)t.Compute(arg2, "");
+            string arg1S = arg1Int.ToString();
+            string arg2S = arg2Int.ToString();
+            double arg1D = double.Parse(arg1S);
+            double arg2D = 1/double.Parse(arg2S);
+            double powb = Math.Pow(arg1D, arg2D);
+            pow = powb.ToString();
+            return pow;
+        }
+        public string Fact() //faktorijal
+        {
+            string fact;
+            int p = int.Parse(sub);
+            double f = 1;
+            for (int i = 1; i <= p; i++)
+            {
+                f *= i;
+            }
+            fact = f.ToString();
+            return fact;
+        }
+        public string Random(string arg1, string arg2) //random
+        {
+            DataTable t = new DataTable();
+            string ran;
+            Random R = new Random();
+            arg1Int = (int)t.Compute(arg1, "");
+            arg2Int = (int)t.Compute(arg2, "");
+            double ranb = R.Next(arg1Int, arg2Int + 1);
+            ran = ranb.ToString();
+            return ran;
+        }
+        public string Log(string arg1, string arg2) //logaritam
+        {
+            DataTable t = new DataTable();
+            string log;
+            arg1Int = (int)t.Compute(arg1, "");
+            arg2Int = (int)t.Compute(arg2, "");
+            double logb = Math.Log(arg1Int, arg2Int);
+            log = logb.ToString();
+            return log;
+        }
+        //kraj matematickih komanda
+        //string komande
+        public string Count() //broji
+        {
+            string cnt;
+            cnt = sub.Length.ToString();
+            return cnt;
+        }
+        public string Remove(string arg1, string arg2) //brise
+        {
+            string nov;
+            nov = arg1.Replace(arg2, "");
+            return nov;
+        }
+        public int Ascii() //ascii
+        {
+            return (int)sub[0];
+        }
+        public string Back() //unazad
+        {
+            string back = "";
+            for (int i = 0; i < sub.Length; i++)
+            {
+                back = sub[i] + back;
+            }
+            return back;
+        }
+        public string ToUpper() //pretvara u velika slova
+        {
+            return sub.ToUpper();
+        }
+        public string ToLower() //pretvara u mala slova
+        {
+            return sub.ToLower();
+        }
+        public string RemoveCount(string arg1, string arg2) //brise prvih n slova
+        {
+            string nov;
+            DataTable t = new DataTable();
+            arg2Int = (int)t.Compute(arg2, "");
+            nov = arg1.Remove(0, arg2Int);
+            return nov;
+        }
+        public string WriteFor(string arg1, string arg2) //ispisuje vise puta
+        {
+            string nov = "";
+            DataTable t = new DataTable();
+            arg2Int = (int)t.Compute(arg2, "");
+            for (int i = 0; i < arg2Int; i++)
+            {
+                nov += arg1;
+            }
+            return nov;
+        }
+        public string WriteLineFor(string arg1, string arg2) //ispisuje i dodaje novi red vise puta
+        {
+            string nov = "";
+            DataTable t = new DataTable();
+            arg2Int = (int)t.Compute(arg2, "");
+            for (int i = 0; i < arg2Int; i++)
+            {
+                nov += arg1 + "\n";
+            }
+            return nov;
+        }
+        public void MsgBox(string arg1, string arg2)
+        {
+            MessageBox.Show(arg1,arg2);
+        }
+        //kraj string komandi
+        public void Wait()
+        {
+            Thread.Sleep(int.Parse(sub));
+        }
+    }
+}
